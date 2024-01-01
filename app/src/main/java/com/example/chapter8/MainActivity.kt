@@ -3,14 +3,14 @@ package com.example.chapter8
 import android.Manifest
 import android.content.pm.PackageManager
 import android.net.Uri
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
-import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.recyclerview.widget.GridLayoutManager
 import com.example.chapter8.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
@@ -20,6 +20,7 @@ class MainActivity : AppCompatActivity() {
         updateImages(uriList)
     }
     private lateinit var binding: ActivityMainBinding
+    private lateinit var imageAdapter: ImageAdapter
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
@@ -27,6 +28,20 @@ class MainActivity : AppCompatActivity() {
 
         binding.loadImageButton.setOnClickListener {
             checkPermission()
+        }
+
+        initRecyclerView()
+    }
+
+    private fun initRecyclerView() {
+        imageAdapter = ImageAdapter(object : ImageAdapter.ItemClickListener{
+            override fun onLoadMoreClick() {
+                checkPermission()
+            }
+        })
+        binding.imageRecyclerView.apply {
+            adapter = imageAdapter
+            layoutManager = GridLayoutManager(context, 2)
         }
     }
     private fun checkPermission() {
@@ -46,8 +61,6 @@ class MainActivity : AppCompatActivity() {
                 requestReadExternalStorage()
             }
         }
-
-
     }
 
     private fun showPermissionInfoDialog(){
@@ -70,7 +83,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateImages(uriList: List<Uri>) {
-        Log.d("updateImages", "$uriList")
+        val images = uriList.map { ImageItems.Image(it)}
+        imageAdapter.currentList.toMutableList().apply{
+            addAll(images)
+        }
+        imageAdapter.submitList(images)
     }
 
     override fun onRequestPermissionsResult(
@@ -82,7 +99,8 @@ class MainActivity : AppCompatActivity() {
 
         when(requestCode) {
             READ_MEDIA_IMAGES -> {
-                if(grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) {
+                val resultCode = grantResults.firstOrNull() ?: PackageManager.PERMISSION_DENIED
+                if(resultCode == PackageManager.PERMISSION_GRANTED) {
                     loadImage()
                 }
             }
